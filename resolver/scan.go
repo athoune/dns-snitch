@@ -14,31 +14,32 @@ import (
 	"github.com/gookit/goutil/dump"
 )
 
-func (r *Resolver) Scan(iface *net.Interface) error {
-	ips, err := InterfaceToIP(iface)
-	if err != nil {
-		return err
-	}
+func (r *Resolver) Scan(ifaces []*net.Interface) error {
 	oups := make(chan error)
-	for _, addr := range ips {
-		// Sanity-check that the interface has a good address.
-		if addr == nil {
-			return errors.New("no good IP network found")
-		} else if addr.IP[0] == 127 {
-			return errors.New("skipping localhost")
-		} else if addr.Mask[0] != 0xff || addr.Mask[1] != 0xff {
-			return errors.New("mask means network is too large")
+	for _, iface := range ifaces {
+		ips, err := InterfaceToIP(iface)
+		if err != nil {
+			return err
 		}
-		log.Printf("Using network range %v for interface %v", addr, iface.Name)
-
-		go func() {
-			// Open up a pcap handle for packet reads/writes.
-			handle, err := pcap.OpenLive(iface.Name, 65536, true, pcap.BlockForever)
-			if err != nil {
-				oups <- err
-				return
+		for _, addr := range ips {
+			// Sanity-check that the interface has a good address.
+			if addr == nil {
+				return errors.New("no good IP network found")
+			} else if addr.IP[0] == 127 {
+				return errors.New("skipping localhost")
+			} else if addr.Mask[0] != 0xff || addr.Mask[1] != 0xff {
+				return errors.New("mask means network is too large")
 			}
-			err = handle.SetBPFFilter(`
+			log.Printf("Using network range %v for interface %v", addr, iface.Name)
+
+			go func() {
+				// Open up a pcap handle for packet reads/writes.
+				handle, err := pcap.OpenLive(iface.Name, 65536, true, pcap.BlockForever)
+				if err != nil {
+					oups <- err
+					return
+				}
+				err = handle.SetBPFFilter(`
 			(
 				(dst port 53 or src port 53)
 				and proto UDP
@@ -48,21 +49,22 @@ func (r *Resolver) Scan(iface *net.Interface) error {
 					or src port 80 or src port 443
 				)
 			)`)
-			if err != nil {
-				oups <- err
-				return
-			}
-			defer handle.Close()
-
-			for {
-				data, _, err := handle.ReadPacketData()
 				if err != nil {
-					fmt.Println("Read packet error", err)
-					continue
+					oups <- err
+					return
 				}
-				r.read(data)
-			}
-		}()
+				defer handle.Close()
+
+				for {
+					data, _, err := handle.ReadPacketData()
+					if err != nil {
+						fmt.Println("Read packet error", err)
+						continue
+					}
+					r.read(data)
+				}
+			}()
+		}
 	}
 	go func() {
 		for {
@@ -71,7 +73,7 @@ func (r *Resolver) Scan(iface *net.Interface) error {
 		}
 	}()
 	for {
-		err = <-oups
+		err := <-oups
 		fmt.Println(err)
 	}
 	return nil
