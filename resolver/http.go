@@ -22,7 +22,11 @@ func (r *Resolver) domain(ip net.IP) string {
 	if ok {
 		return domains.Slice()[0] // FIXME
 	} else {
-		return ip.String()
+		addr, err := net.LookupAddr(ip.String())
+		if err != nil {
+			return ip.String()
+		}
+		return addr[0]
 	}
 }
 
