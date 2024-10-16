@@ -38,7 +38,16 @@ func (r *Resolver) Scan(iface *net.Interface) error {
 				oups <- err
 				return
 			}
-			err = handle.SetBPFFilter("((dst port 53 or src port 53) and proto UDP) or (proto TCP and ( dst port 80 or dst port 443))")
+			err = handle.SetBPFFilter(`
+			(
+				(dst port 53 or src port 53)
+				and proto UDP
+			) or (
+				proto TCP and (
+					dst port 80 or dst port 443
+					or src port 80 or src port 443
+				)
+			)`)
 			if err != nil {
 				oups <- err
 				return
@@ -80,7 +89,31 @@ func (r *Resolver) read(myPacketData []byte) {
 		}
 		return
 	}
+	var src, dest net.IP
+	ipLayer := packet.Layer(layers.LayerTypeIPv6)
+	//dump.P("ip6", ipLayer)
+	if ipLayer != nil {
+		ip6 := ipLayer.(*layers.IPv6)
+		src = ip6.SrcIP
+		dest = ip6.DstIP
+	} else {
+		ipLayer = packet.Layer(layers.LayerTypeIPv4)
+		ip4 := ipLayer.(*layers.IPv4)
+		src = ip4.SrcIP
+		dest = ip4.DstIP
+		/*
+			fmt.Println("\n\n\nip4")
+			dump.P(src)
+			dump.P(dest)
+		*/
+	}
+
 	tcpLayer := packet.Layer(layers.LayerTypeTCP)
 	if tcpLayer != nil {
+		tcp, _ := tcpLayer.(*layers.TCP)
+		err := r.readHTTP(src, dest, tcp)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }
