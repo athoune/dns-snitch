@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"sync"
 
+	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/go-set"
 	lru "github.com/hashicorp/golang-lru/v2"
 )
@@ -30,21 +31,26 @@ func New() *Resolver {
 }
 
 func (r *Resolver) Dump(out io.Writer) {
-	r.mutex.RLock()
-	ips := r.resolution.Keys()
-	values := r.resolution.Values()
-	r.mutex.RUnlock()
-	fmt.Fprint(out, "\n===\n")
-	for i, ip := range ips {
-		fmt.Fprintf(out, "%s %s\n", ip, values[i])
-	}
+	/*
+			r.mutex.RLock()
+			ips := r.resolution.Keys()
+			values := r.resolution.Values()
+			r.mutex.RUnlock()
+		fmt.Fprint(out, "\n===\n")
+		for i, ip := range ips {
+			fmt.Fprintf(out, "%s %s\n", ip, values[i])
+		}
+	*/
 	fmt.Fprint(out, "\n---\n")
 	r.bpMutex.RLock()
-	for k, v := range r.download {
-		fmt.Fprintf(out, "v %s %d\n", k, v)
-	}
-	for k, v := range r.upload {
-		fmt.Fprintf(out, "^ %s %d\n", k, v)
+	down := sortKV(r.download)
+	for _, kv := range down {
+		fmt.Fprintf(out, "%-40s |▼ %-20s", kv.k, humanize.Bytes(uint64(kv.v)))
+		up, ok := r.upload[kv.k]
+		if ok {
+			fmt.Fprintf(out, " |▲ %-20s", humanize.Bytes(uint64(up)))
+		}
+		fmt.Fprint(out, "\n")
 	}
 	r.bpMutex.RUnlock()
 	fmt.Fprint(out, "\n")
