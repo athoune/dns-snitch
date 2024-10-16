@@ -45,10 +45,10 @@ func (r *Resolver) Dump(out io.Writer) {
 	r.bpMutex.RLock()
 	down := sortKV(r.download)
 	for _, kv := range down {
-		fmt.Fprintf(out, "%-40s |▼ %-20s", kv.k, humanize.Bytes(uint64(kv.v)))
+		fmt.Fprintf(out, "%-80s |▼ %-10s", kv.k, humanize.Bytes(uint64(kv.v)))
 		up, ok := r.upload[kv.k]
 		if ok {
-			fmt.Fprintf(out, " |▲ %-20s", humanize.Bytes(uint64(up)))
+			fmt.Fprintf(out, " |▲ %-10s", humanize.Bytes(uint64(up)))
 		}
 		fmt.Fprint(out, "\n")
 	}
