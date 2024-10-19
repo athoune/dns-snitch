@@ -3,6 +3,7 @@ package resolver
 import (
 	"net"
 	"net/netip"
+	"time"
 
 	"github.com/google/gopacket/layers"
 	"github.com/hashicorp/go-set"
@@ -41,6 +42,14 @@ func (r *Resolver) readHTTP(src, dest net.IP, tcp *layers.TCP) error {
 			s = 0
 		}
 		r.upload[domain] = s + size
+		r.lines <- &Line{
+			Port:   uint32(tcp.DstPort),
+			Domain: domain,
+			Target: dest,
+			From:   src,
+			Size:   uint32(size),
+			TS:     time.Now().Local().UnixMicro(),
+		}
 		r.bpMutex.Unlock()
 		return nil
 	}

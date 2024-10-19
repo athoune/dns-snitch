@@ -72,6 +72,7 @@ func (r *Resolver) Scan(ifaces []*net.Interface) error {
 			r.Dump(os.Stdout)
 		}
 	}()
+	go r.parquetLoop(oups)
 	for {
 		err := <-oups
 		fmt.Println(err)

@@ -17,6 +17,7 @@ type Resolver struct {
 	download   map[string]int
 	mutex      *sync.RWMutex
 	bpMutex    *sync.RWMutex
+	lines      chan *Line
 }
 
 func New() *Resolver {
@@ -27,6 +28,7 @@ func New() *Resolver {
 		bpMutex:    &sync.RWMutex{},
 		upload:     make(map[string]int),
 		download:   make(map[string]int),
+		lines:      make(chan *Line),
 	}
 }
 
