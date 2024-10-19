@@ -32,7 +32,7 @@ func (r *Resolver) parquetLoop(errorChan chan error) error {
 		return err
 	}
 	count := make(chan interface{})
-	timeout := time.Tick(10 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	mutex := &sync.Mutex{}
 	lines := make([]*Line, 0)
 
@@ -42,7 +42,6 @@ func (r *Resolver) parquetLoop(errorChan chan error) error {
 			parquet.Write[*Line](w, lines)
 			fmt.Println("Wrote Parquet", len(lines))
 			lines = make([]*Line, 0)
-			timeout = time.Tick(10 * time.Second)
 		}
 		mutex.Unlock()
 	}
@@ -50,7 +49,7 @@ func (r *Resolver) parquetLoop(errorChan chan error) error {
 	go func() {
 		for {
 			select {
-			case <-timeout:
+			case <-ticker.C:
 				writeParquet()
 			case <-count:
 				writeParquet()
