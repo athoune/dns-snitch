@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 )
 
-func TestCounter(t *testing.T) {
+func TestBatchCounter(t *testing.T) {
 	n := 100
 	done := 0
 	total := 0
-	c := New[string](10, func(k []string, v []int) error {
+	c := New[string](10, 10*time.Second, func(k []string, v []int) error {
 		fmt.Println("v", v)
 		if len(k) == 0 {
 			return nil
@@ -48,5 +49,30 @@ func TestCounter(t *testing.T) {
 	}
 	if total != n {
 		t.Error("Wrong total", total, "!=", n)
+	}
+}
+
+func TestTimeCounter(t *testing.T) {
+	n := 100
+	cpt := 0
+	c := New[string](10, 100*time.Millisecond, func(k []string, v []int) error {
+		fmt.Println(v)
+		if len(v) == 0 {
+			return nil
+		}
+		cpt += v[0]
+		return nil
+	})
+	for i := 0; i < n; i++ {
+		go func() {
+			_, err := c.Add("pim", 1)
+			if err != nil {
+				t.Error("Add loop error :", err)
+			}
+		}()
+	}
+	time.Sleep(200 * time.Millisecond)
+	if cpt != n {
+		t.Error("Not enough", cpt)
 	}
 }

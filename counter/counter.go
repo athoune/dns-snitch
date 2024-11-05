@@ -1,48 +1,69 @@
 package counter
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type Counters[K comparable] struct {
-	lock       *sync.Mutex
-	counters   map[K]int
-	batch_size int
-	cpt        int
-	harvester  Harvester[K]
+	lock           *sync.Mutex
+	counters       map[K]int
+	batch_size     int
+	cpt            int
+	batch_duration time.Duration
+	harvester      Harvester[K]
+	timer          *time.Timer
+	batch_complete chan interface{}
 }
 
 type Harvester[K comparable] func(key []K, value []int) error
 
-func New[K comparable](batch_size int, h Harvester[K]) *Counters[K] {
+func New[K comparable](batch_size int, batch_duration time.Duration, h Harvester[K]) *Counters[K] {
 	// New return a new *Counters[K]
 	// if batch_size > 0, it's a trigger
-	return &Counters[K]{
-		lock:       &sync.Mutex{},
-		counters:   make(map[K]int),
-		batch_size: batch_size,
-		harvester:  h,
+	c := &Counters[K]{
+		lock:           &sync.Mutex{},
+		counters:       make(map[K]int),
+		batch_size:     batch_size,
+		batch_duration: batch_duration,
+		harvester:      h,
+		timer:          time.NewTimer(batch_duration),
+		batch_complete: make(chan interface{}),
+	}
+	if c.harvester != nil {
+		go c.loopForHarvest()
+	}
+	return c
+}
+
+func (c *Counters[K]) loopForHarvest() {
+	for {
+		select {
+		case <-c.timer.C:
+			c.lock.Lock()
+		case <-c.batch_complete:
+			// lock is Lock in the Add function
+		}
+		c.harvest()
+		c.timer = time.NewTimer(c.batch_duration)
+		c.lock.Unlock()
 	}
 }
 
 func (c *Counters[K]) Add(key K, value int) (bool, error) {
 	c.lock.Lock()
-	defer c.lock.Unlock()
 	r := false
 	v, ok := c.counters[key]
 	if !ok {
 		c.counters[key] = value
-		return r, nil
 	}
 	c.counters[key] = v + value
 	c.cpt++
-	if c.cpt == c.batch_size-1 { // increment is done before, for handling early return
+	if c.cpt == c.batch_size { // increment is done before, for handling early return
+		c.batch_complete <- new(interface{})
 		r = true
-		c.cpt = 0
-		if c.harvester != nil {
-			err := c.harvest()
-			if err != nil {
-				return false, err
-			}
-		}
+	} else {
+		c.lock.Unlock()
 	}
 	return r, nil
 }
@@ -62,6 +83,7 @@ func (c *Counters[K]) harvest() error {
 		return err
 	}
 	c.counters = make(map[K]int)
+	c.cpt = 0
 	return nil
 }
 
