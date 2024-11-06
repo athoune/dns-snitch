@@ -3,8 +3,9 @@ package main
 import (
 	"net"
 	"os"
+	"time"
 
-	"github.com/athoune/dns-snitch/resolver"
+	"github.com/athoune/dns-snitch/snitch"
 )
 
 func main() {
@@ -16,8 +17,11 @@ func main() {
 		}
 		ifaces = append(ifaces, iface)
 	}
-	resolver := resolver.New()
-	err := resolver.Scan(ifaces)
+	resolver, err := snitch.New(100, 10*time.Second, "./snitch.parquet")
+	if err != nil {
+		panic(err)
+	}
+	err = resolver.Scan(ifaces)
 	if err != nil {
 		panic(err)
 	}

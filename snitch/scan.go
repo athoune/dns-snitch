@@ -1,4 +1,4 @@
-package resolver
+package snitch
 
 import (
 	"errors"
@@ -14,7 +14,7 @@ import (
 	"github.com/gookit/goutil/dump"
 )
 
-func (r *Resolver) Scan(ifaces []*net.Interface) error {
+func (r *Snitch) Scan(ifaces []*net.Interface) error {
 	oups := make(chan error)
 	for _, iface := range ifaces {
 		ips, err := InterfaceToIP(iface)
@@ -72,7 +72,6 @@ func (r *Resolver) Scan(ifaces []*net.Interface) error {
 			r.Dump(os.Stdout)
 		}
 	}()
-	go r.parquetLoop(oups)
 	for {
 		err := <-oups
 		fmt.Println(err)
@@ -80,7 +79,7 @@ func (r *Resolver) Scan(ifaces []*net.Interface) error {
 	return nil
 }
 
-func (r *Resolver) read(myPacketData []byte) {
+func (r *Snitch) read(myPacketData []byte) {
 	packet := gopacket.NewPacket(myPacketData, layers.LayerTypeEthernet, gopacket.Default)
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	if udpLayer != nil {

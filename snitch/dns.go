@@ -1,4 +1,4 @@
-package resolver
+package snitch
 
 import (
 	"net/netip"
@@ -8,7 +8,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (r *Resolver) readDNS(udp *layers.UDP) error {
+func (s *Snitch) readDNS(udp *layers.UDP) error {
 	msg := &dns.Msg{}
 	err := msg.Unpack(udp.Payload)
 	if err != nil {
@@ -20,11 +20,11 @@ func (r *Resolver) readDNS(udp *layers.UDP) error {
 			case *dns.A:
 				a, _ := answer.(*dns.A)
 				addr := netip.AddrFrom4([4]byte(a.A))
-				r.AddResolution(addr, a.Hdr.Name)
+				s.AddResolution(addr, a.Hdr.Name)
 			case *dns.AAAA:
 				a, _ := answer.(*dns.AAAA)
 				addr := netip.AddrFrom16([16]byte(a.AAAA))
-				r.AddResolution(addr, a.Hdr.Name)
+				s.AddResolution(addr, a.Hdr.Name)
 			default:
 				//dump.P(msg)
 			}
@@ -33,13 +33,13 @@ func (r *Resolver) readDNS(udp *layers.UDP) error {
 	return nil
 }
 
-func (r *Resolver) AddResolution(addr netip.Addr, domain string) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-	value, ok := r.resolution.Get(addr)
+func (s *Snitch) AddResolution(addr netip.Addr, domain string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	value, ok := s.resolution.Get(addr)
 	if !ok {
 		value = set.New[string](3)
 	}
 	value.Insert(domain)
-	r.resolution.Add(addr, value)
+	s.resolution.Add(addr, value)
 }
