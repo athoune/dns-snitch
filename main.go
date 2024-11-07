@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"time"
@@ -9,7 +10,12 @@ import (
 )
 
 func main() {
+	if len(os.Args) == 1 {
+		fmt.Println("Some interfaces are mandatory")
+		return
+	}
 	ifaces := make([]*net.Interface, 0)
+
 	for i := 1; i < len(os.Args); i++ {
 		iface, err := net.InterfaceByName(os.Args[1])
 		if err != nil {
