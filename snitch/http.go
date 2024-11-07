@@ -51,9 +51,11 @@ func (s *Snitch) readHTTP(src, dest net.IP, tcp *layers.TCP) error {
 		l.Direction = "DOWN"
 	}
 	if l.Direction != "" {
-		_, err = s.counter.Add(l, size)
-		if err != nil {
-			return err
+		for _, counter := range s.counters {
+			_, err = counter.Add(l, size)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

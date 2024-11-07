@@ -4,7 +4,6 @@ import (
 	"io"
 	"net/netip"
 	"sync"
-	"time"
 
 	"github.com/athoune/dns-snitch/counter"
 	"github.com/athoune/dns-snitch/output"
@@ -14,24 +13,22 @@ import (
 
 type Snitch struct {
 	resolution *lru.Cache[netip.Addr, *set.Set[string]]
-	counter    *counter.Counters[*output.Line]
-	writer     *output.Writer
+	counters   []*counter.Counters[*output.Line]
 	mutex      *sync.RWMutex
 }
 
-func New(batch_size int, batch_duration time.Duration, path string) (*Snitch, error) {
+func New() *Snitch {
 	l, _ := lru.New[netip.Addr, *set.Set[string]](256)
-	v, err := output.New(path)
-	if err != nil {
-		return nil, err
-	}
 
 	return &Snitch{
 		resolution: l,
-		counter:    counter.New[*output.Line](batch_size, batch_duration, v.Write),
-		writer:     v,
+		counters:   make([]*counter.Counters[*output.Line], 0),
 		mutex:      &sync.RWMutex{},
-	}, nil
+	}
+}
+
+func (s *Snitch) AddCounter(c *counter.Counters[*output.Line]) {
+	s.counters = append(s.counters, c)
 }
 
 func (r *Snitch) Dump(output io.Writer) {

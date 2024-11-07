@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/athoune/dns-snitch/counter"
+	"github.com/athoune/dns-snitch/output"
 	"github.com/athoune/dns-snitch/snitch"
 )
 
@@ -23,11 +25,13 @@ func main() {
 		}
 		ifaces = append(ifaces, iface)
 	}
-	resolver, err := snitch.New(100, 10*time.Second, "./snitch.parquet")
+	Snitch := snitch.New()
+	v, err := output.New("./snitch.parquet")
 	if err != nil {
 		panic(err)
 	}
-	err = resolver.Scan(ifaces)
+	Snitch.AddCounter(counter.New[*output.Line](100, 10*time.Second, v.Write))
+	err = Snitch.Scan(ifaces)
 	if err != nil {
 		panic(err)
 	}
