@@ -3,6 +3,7 @@ package output
 import (
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/dustin/go-humanize"
 	"golang.org/x/term"
@@ -33,13 +34,14 @@ func (t *Term) Write(k []*Line, v []int) error {
 	pattern := fmt.Sprintf("|%%-%ds %%4s|%%6s|\n", width-14)
 	fmt.Print("\033[H\033[2J") // clear screen
 	lines := min(height, len(k)) - 2
-	i := 0
-	for range len(k) {
-		fmt.Printf(pattern, k[i].Domain, k[i].Direction, humanize.Bytes(uint64(v[i])))
+	lv := Lines2LineValues(k, v)
+	sort.Sort(LineValueBySize(lv))
+
+	for i, line := range lv {
+		fmt.Printf(pattern, line.Domain, line.Direction, humanize.Bytes(uint64(line.Size)))
 		if i == lines {
 			break
 		}
-		i++
 	}
 	return nil
 }
