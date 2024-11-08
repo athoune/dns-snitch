@@ -30,7 +30,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	Snitch.AddCounter(counter.New[*output.Line](100, 10*time.Second, v.Write))
+	Snitch.AddCounter(counter.New[*output.Line](100, 30*time.Second, v.Write))
+	term := output.NewTerm()
+	Snitch.AddCounter(counter.New[*output.Line](100, 10*time.Second, term.Write))
 	err = Snitch.Scan(ifaces)
 	if err != nil {
 		panic(err)

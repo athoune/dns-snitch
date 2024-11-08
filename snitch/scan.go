@@ -73,8 +73,8 @@ func (r *Snitch) Scan(ifaces []*net.Interface) error {
 		}
 	}()
 	for {
-		err := <-oups
-		fmt.Println(err)
+		//err := <-oups
+		//fmt.Println(err)
 	}
 	return nil
 }
