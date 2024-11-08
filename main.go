@@ -31,8 +31,9 @@ func main() {
 		panic(err)
 	}
 	Snitch.AddCounter(counter.New[*output.Line](100, 30*time.Second, v.Write))
-	term := output.NewTerm(12) // 12*5s = 1m
-	Snitch.AddCounter(counter.New[*output.Line](100, 5*time.Second, term.Write))
+
+	term := output.NewTerm(60, 10*time.Second)
+	Snitch.AddCounter(counter.New[*output.Line](1000, 10*time.Second, term.Write))
 	err = Snitch.Scan(ifaces)
 	if err != nil {
 		panic(err)
