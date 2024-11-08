@@ -115,7 +115,7 @@ func (r *Snitch) read(myPacketData []byte) {
 		tcp, _ := tcpLayer.(*layers.TCP)
 		err := r.readHTTP(src, dest, tcp)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("HTTP read error", err)
 		}
 	}
 }
