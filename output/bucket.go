@@ -32,7 +32,16 @@ func (l *LeakyBucket) Get(line *Line) *BucketValues {
 }
 
 func (l *LeakyBucket) LineValues() []*LineValue {
-	return nil
+	values := make([]*LineValue, len(l.datas))
+	i := 0
+	for k, v := range l.datas {
+		values[i] = &LineValue{
+			Line: k,
+			Size: int32(v.Sum()),
+		}
+		i++
+	}
+	return values
 }
 
 func (b *BucketValues) Sum() int {
