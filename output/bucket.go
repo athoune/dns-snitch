@@ -73,6 +73,12 @@ func (b *BucketValues) next() int {
 	return b.current_pos
 }
 
+func (l *LeakyBucket) LeaksAll() {
+	for _, v := range l.datas {
+		v.Leak()
+	}
+}
+
 func (l *LeakyBucket) Add(line *Line, value int) {
 	current, ok := l.datas[*line]
 	if ok {
