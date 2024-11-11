@@ -29,7 +29,7 @@ func NewFromWriter(w io.Writer) *ParquetWriter {
 	return &ParquetWriter{w}
 }
 
-func (w *ParquetWriter) Write(k []*Line, v []int) error {
+func (w *ParquetWriter) Write(k []Line, v []int) error {
 
 	return parquet.Write[*LineValue](w.writer, Lines2LineValues(k, v))
 }

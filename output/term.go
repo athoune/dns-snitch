@@ -6,28 +6,28 @@ import (
 	"sort"
 	"time"
 
+	"github.com/athoune/dns-snitch/bucket"
 	"github.com/dustin/go-humanize"
 	"golang.org/x/term"
 )
 
 type Term struct {
 	term     int
-	buckets  LeakyBucket
+	buckets  bucket.LeakyBucket[Line]
 	truncate time.Duration
 }
 
 func NewTerm(capacity int, truncate time.Duration) *Term {
 	return &Term{
 		term:     int(os.Stdin.Fd()),
-		buckets:  *NewLeakyBucket(capacity),
+		buckets:  *bucket.NewLeakyBucket[Line](capacity),
 		truncate: truncate,
 	}
 
 }
 
-func (t *Term) Write(k []*Line, v []int) error {
+func (t *Term) Write(k []Line, v []int) error {
 	fmt.Print("\033[H\033[2J") // clear screen
-	t.buckets.LeaksAll()
 	if len(k) == 0 {
 		return nil
 	}
@@ -43,7 +43,8 @@ func (t *Term) Write(k []*Line, v []int) error {
 	}
 	pattern := fmt.Sprintf("|%%-%ds :%%-4d %%-4s|%%7s|\n", width-21)
 	lines := min(height, len(k)) - 2
-	lv := t.buckets.LineValues()
+	ll, vv := t.buckets.Values()
+	lv := Lines2LineValues(ll, vv)
 	sort.Sort(LineValueBySize(lv))
 
 	for i, line := range lv {
