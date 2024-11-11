@@ -1,6 +1,9 @@
 package snitch
 
 import (
+	"io"
+	"log"
+	"log/slog"
 	"net"
 	"net/netip"
 	"time"
@@ -51,6 +54,7 @@ func (s *Snitch) readHTTP(src, dest net.IP, tcp *layers.TCP) error {
 		l.Direction = "DOWN"
 	}
 	if l.Direction != "" {
+		slog.Debug("read", "size", size, "src", src, "dest", dest)
 		for _, counter := range s.counters {
 			_, err = counter.Add(l, size)
 			if err != nil {
