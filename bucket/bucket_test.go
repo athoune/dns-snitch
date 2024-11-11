@@ -1,4 +1,4 @@
-package output
+package bucket
 
 import (
 	"fmt"
@@ -6,10 +6,8 @@ import (
 )
 
 func TestBucket(t *testing.T) {
-	bucket := NewLeakyBucket(6)
-	line := &Line{
-		Domain: "popo.com",
-	}
+	bucket := NewLeakyBucket[string](6)
+	line := "popo.com"
 	bucket.Add(line, 1)
 	bucket.Add(line, 2)
 	v := bucket.Get(line)

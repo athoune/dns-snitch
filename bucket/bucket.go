@@ -1,4 +1,4 @@
-package output
+package bucket
 
 import (
 	"fmt"
@@ -11,37 +11,24 @@ type BucketValues struct {
 	length      int
 }
 
-type LeakyBucket struct {
-	datas    map[Line]*BucketValues
+type LeakyBucket[K comparable] struct {
+	datas    map[K]*BucketValues
 	capacity int
 }
 
-func NewLeakyBucket(capacity int) *LeakyBucket {
-	return &LeakyBucket{
-		datas:    make(map[Line]*BucketValues),
+func NewLeakyBucket[K comparable](capacity int) *LeakyBucket[K] {
+	return &LeakyBucket[K]{
+		datas:    make(map[K]*BucketValues),
 		capacity: capacity,
 	}
 }
 
-func (l *LeakyBucket) Get(line *Line) *BucketValues {
-	v, ok := l.datas[*line]
+func (l *LeakyBucket[K]) Get(line K) *BucketValues {
+	v, ok := l.datas[line]
 	if ok {
 		return v
 	}
 	return nil
-}
-
-func (l *LeakyBucket) LineValues() []*LineValue {
-	values := make([]*LineValue, len(l.datas))
-	i := 0
-	for k, v := range l.datas {
-		values[i] = &LineValue{
-			Line: k,
-			Size: int32(v.Sum()),
-		}
-		i++
-	}
-	return values
 }
 
 func (b *BucketValues) Sum() int {
@@ -73,14 +60,14 @@ func (b *BucketValues) next() int {
 	return b.current_pos
 }
 
-func (l *LeakyBucket) LeaksAll() {
+func (l *LeakyBucket[K]) LeaksAll() {
 	for _, v := range l.datas {
 		v.Leak()
 	}
 }
 
-func (l *LeakyBucket) Add(line *Line, value int) {
-	current, ok := l.datas[*line]
+func (l *LeakyBucket[K]) Add(line K, value int) {
+	current, ok := l.datas[line]
 	if ok {
 		current.values[current.next()] = value
 	} else {
@@ -89,7 +76,7 @@ func (l *LeakyBucket) Add(line *Line, value int) {
 			current_pos: 0,
 		}
 		current.values[0] = value
-		l.datas[*line] = current
+		l.datas[line] = current
 	}
 	current.length = min(l.capacity, current.length+1)
 }
@@ -113,4 +100,16 @@ func (b *BucketValues) String() string {
 		}
 	}
 	return buff.String()
+}
+
+func (l *LeakyBucket[K]) Values() ([]K, []int) {
+	kk := make([]K, len(l.datas))
+	vv := make([]int, len(l.datas))
+	i := 0
+	for k, v := range l.datas {
+		kk[i] = k
+		vv[i] = v.Sum()
+		i++
+	}
+	return kk, vv
 }
