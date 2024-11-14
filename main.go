@@ -22,10 +22,10 @@ func main() {
 		panic(err)
 	}
 	defer f.Close()
-	logger := slog.New(slog.NewJSONHandler(f, nil))
+	//logger := slog.New(slog.NewJSONHandler(f, nil))
 	//logger := slog.Default()
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	slog.SetDefault(logger)
+	//slog.SetDefault(logger)
 
 	ifaces := make([]*net.Interface, 0)
 
