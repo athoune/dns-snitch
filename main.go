@@ -43,7 +43,7 @@ func main() {
 	}
 	Snitch.AddCounter(counter.New[output.Line](100, 30*time.Second, v.Write))
 
-	term := output.NewTerm(60, 10*time.Second)
+	term := output.NewTerm(1000, 10*time.Second)
 	Snitch.AddCounter(counter.New[output.Line](1000, 10*time.Second, term.Write))
 	err = Snitch.Scan(ifaces)
 	if err != nil {
