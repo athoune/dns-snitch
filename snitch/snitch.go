@@ -13,7 +13,7 @@ import (
 
 type Snitch struct {
 	resolution *lru.Cache[netip.Addr, *set.Set[string]]
-	counters   []*counter.Counters[*output.Line]
+	counters   []*counter.Counters[output.Line]
 	mutex      *sync.RWMutex
 }
 
@@ -22,12 +22,12 @@ func New() *Snitch {
 
 	return &Snitch{
 		resolution: l,
-		counters:   make([]*counter.Counters[*output.Line], 0),
+		counters:   make([]*counter.Counters[output.Line], 0),
 		mutex:      &sync.RWMutex{},
 	}
 }
 
-func (s *Snitch) AddCounter(c *counter.Counters[*output.Line]) {
+func (s *Snitch) AddCounter(c *counter.Counters[output.Line]) {
 	s.counters = append(s.counters, c)
 }
 

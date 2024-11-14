@@ -12,7 +12,7 @@ import (
 	"github.com/gookit/goutil/dump"
 )
 
-func (r *Snitch) Scan(ifaces []*net.Interface) error {
+func (s *Snitch) Scan(ifaces []*net.Interface) error {
 	oups := make(chan error)
 	for _, iface := range ifaces {
 		ips, err := InterfaceToIP(iface)
@@ -32,11 +32,12 @@ func (r *Snitch) Scan(ifaces []*net.Interface) error {
 
 			go func() {
 				// Open up a pcap handle for packet reads/writes.
-				handle, err := pcap.OpenLive(iface.Name, 65536, true, pcap.BlockForever)
+				handle, err := pcap.OpenLive(iface.Name, 65536, false, pcap.BlockForever)
 				if err != nil {
 					oups <- err
 					return
 				}
+				defer handle.Close()
 				err = handle.SetBPFFilter(`
 			(
 				(dst port 53 or src port 53)
@@ -51,43 +52,38 @@ func (r *Snitch) Scan(ifaces []*net.Interface) error {
 					oups <- err
 					return
 				}
-				defer handle.Close()
 
-				for {
-					data, _, err := handle.ReadPacketData()
+				packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+				for packet := range packetSource.Packets() {
+					err = s.read(packet)
 					if err != nil {
-						fmt.Println("Read packet error", err)
-						continue
+						oups <- err
+						return
 					}
-					r.read(data)
 				}
+
 			}()
 		}
 	}
-	go func() {
-		for {
-			time.Sleep(5 * time.Second)
-			r.Dump(os.Stdout)
-		}
-	}()
 	for {
-		//err := <-oups
-		//fmt.Println(err)
+		err := <-oups
+		fmt.Println("pcap scan error :", err)
+		return err
 	}
 	return nil
 }
 
-func (r *Snitch) read(myPacketData []byte) {
-	packet := gopacket.NewPacket(myPacketData, layers.LayerTypeEthernet, gopacket.Default)
+func (s *Snitch) read(packet gopacket.Packet) error {
+	//fmt.Println(packet.Dump())
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	if udpLayer != nil {
 		udp, _ := udpLayer.(*layers.UDP)
 		if udp.DstPort == 53 || udp.SrcPort == 53 {
-			r.readDNS(udp)
+			s.readDNS(udp)
 		} else {
 			dump.P(udp)
 		}
-		return
+		return nil
 	}
 	var src, dest net.IP
 	ipLayer := packet.Layer(layers.LayerTypeIPv6)
@@ -111,9 +107,11 @@ func (r *Snitch) read(myPacketData []byte) {
 	tcpLayer := packet.Layer(layers.LayerTypeTCP)
 	if tcpLayer != nil {
 		tcp, _ := tcpLayer.(*layers.TCP)
-		err := r.readHTTP(src, dest, tcp)
+		err := s.readHTTPPacket(src, dest, tcp, packet)
 		if err != nil {
-			fmt.Println("HTTP read error", err)
+			return errors.New(fmt.Sprint("HTTP read error", err))
 		}
+
 	}
+	return nil
 }

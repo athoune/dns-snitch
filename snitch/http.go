@@ -3,47 +3,60 @@ package snitch
 import (
 	"io"
 	"log"
-	"log/slog"
 	"net"
-	"net/netip"
-	"time"
 
 	"github.com/athoune/dns-snitch/output"
+	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/hashicorp/go-set"
+	"github.com/google/gopacket/tcpassembly"
+	"github.com/google/gopacket/tcpassembly/tcpreader"
 )
 
-// domain return the domain of an IP
-func (s *Snitch) domain(ip net.IP) string {
-	s.mutex.RLock()
-	var domains *set.Set[string]
-	var ok bool
-	if len(ip) == 4 {
-		domains, ok = s.resolution.Get(netip.AddrFrom4([4]byte(ip)))
-	} else {
-		domains, ok = s.resolution.Get(netip.AddrFrom16([16]byte(ip)))
+type tcpStreamFactory struct{}
+
+// tcpStream will handle the actual decoding of http requests.
+type tcpStream struct {
+	net, transport gopacket.Flow
+	r              tcpreader.ReaderStream
+}
+
+func (t *tcpStreamFactory) New(net, transport gopacket.Flow) tcpassembly.Stream {
+	tstream := &tcpStream{
+		net:       net,
+		transport: transport,
+		r:         tcpreader.NewReaderStream(),
 	}
-	s.mutex.RUnlock()
-	if ok {
-		return domains.Slice()[0] // FIXME
-	} else {
-		addr, err := net.LookupAddr(ip.String())
-		if err != nil {
-			return ip.String()
+	go tstream.run() // Important... we must guarantee that data from the reader stream is read.
+
+	// ReaderStream implements tcpassembly.Stream, so we can return a pointer to it.
+	return &tstream.r
+}
+
+func (t *tcpStream) run() {
+	const SIZE = 1024 * 1024
+	buff := make([]byte, SIZE)
+	for {
+		cpt := 0
+		for {
+			i, err := t.r.Read(buff)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatal(err)
+				break
+			}
+			cpt += i
 		}
-		return addr[0]
 	}
 }
 
-func (s *Snitch) readHTTP(src, dest net.IP, tcp *layers.TCP) error {
-	size := len(tcp.Payload)
-	var err error
-	// fmt.Printf("src, dest : %s:%s %s:%s\n", src, tcp.SrcPort, dest, tcp.DstPort)
+func (s *Snitch) buildLine(src, dest net.IP, tcp *layers.TCP) *output.Line {
+	//ts := time.Now().Truncate(s.truncated)
 	l := &output.Line{
 		From:   src.String(),
 		Target: dest.String(),
 		Domain: s.domain(dest),
-		TS:     time.Now().UnixMicro(),
 	}
 	if tcp.DstPort == 443 || tcp.DstPort == 80 {
 		l.Port = uint32(tcp.DstPort)
@@ -53,10 +66,21 @@ func (s *Snitch) readHTTP(src, dest net.IP, tcp *layers.TCP) error {
 		l.Port = uint32(tcp.SrcPort)
 		l.Direction = "DOWN"
 	}
+	return l
+}
+
+func (s *Snitch) readHTTPPacket(src, dest net.IP, tcp *layers.TCP, packet gopacket.Packet) error {
+	var err error
+	var size int
+	l := s.buildLine(src, dest, tcp)
 	if l.Direction != "" {
-		slog.Debug("read", "size", size, "src", src, "dest", dest)
+		ap := packet.ApplicationLayer()
+		if ap == nil {
+			return nil
+		}
+		size = len(ap.Payload())
 		for _, counter := range s.counters {
-			_, err = counter.Add(l, size)
+			_, err = counter.Add(*l, size)
 			if err != nil {
 				return err
 			}

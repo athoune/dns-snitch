@@ -12,14 +12,14 @@ import (
 )
 
 type Term struct {
-	term     int
+	term     int // term file descriptor
 	buckets  bucket.LeakyBucket[Line]
 	truncate time.Duration
 }
 
 func NewTerm(capacity int, truncate time.Duration) *Term {
 	return &Term{
-		term:     int(os.Stdin.Fd()),
+		term:     int(os.Stdout.Fd()),
 		buckets:  *bucket.NewLeakyBucket[Line](capacity),
 		truncate: truncate,
 	}
@@ -31,10 +31,8 @@ func (t *Term) Write(k []Line, v []int) error {
 	if len(k) == 0 {
 		return nil
 	}
-	truncate := t.truncate.Microseconds()
-	normalizedTS := (k[0].TS / truncate) * truncate
+	fmt.Println(len(k), len(v))
 	for i, line := range k {
-		line.TS = normalizedTS
 		t.buckets.Add(line, v[i])
 	}
 	width, height, err := term.GetSize(t.term)
@@ -48,8 +46,8 @@ func (t *Term) Write(k []Line, v []int) error {
 	sort.Sort(LineValueBySize(lv))
 
 	for i, line := range lv {
-		fmt.Printf(pattern, line.Domain, line.Port, line.Direction, humanize.Bytes(uint64(line.Size)))
-		if i == lines {
+		fmt.Printf(pattern, line.Domain, line.Port, line.Direction, humanize.Bytes(uint64(line.Weight)))
+		if i == lines-2 {
 			break
 		}
 	}
