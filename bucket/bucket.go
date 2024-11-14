@@ -1,5 +1,10 @@
 package bucket
 
+import (
+	"fmt"
+	"io"
+)
+
 type LeakyBucket[K comparable] struct {
 	datas    map[K]*BucketValues
 	capacity int
@@ -18,6 +23,13 @@ func (l *LeakyBucket[K]) Get(line K) *BucketValues {
 		return v
 	}
 	return nil
+}
+
+func (l *LeakyBucket[K]) Dump(out io.Writer) {
+	for k, v := range l.datas {
+		fmt.Fprint(out, k)
+		fmt.Fprintln(out, " => ", v.Sum(), "\n", v)
+	}
 }
 
 func (l *LeakyBucket[K]) LeaksAll() {
