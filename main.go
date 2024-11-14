@@ -30,7 +30,7 @@ func main() {
 	ifaces := make([]*net.Interface, 0)
 
 	for i := 1; i < len(os.Args); i++ {
-		iface, err := net.InterfaceByName(os.Args[1])
+		iface, err := net.InterfaceByName(os.Args[i])
 		if err != nil {
 			panic(err)
 		}
