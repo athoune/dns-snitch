@@ -3,7 +3,6 @@ package snitch
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 
 	"github.com/google/gopacket"
@@ -28,7 +27,7 @@ func (s *Snitch) Scan(ifaces []*net.Interface) error {
 			} else if addr.Mask[0] != 0xff || addr.Mask[1] != 0xff {
 				return errors.New("mask means network is too large")
 			}
-			slog.Info("Using network", "range", addr, "interface", iface.Name)
+			//slog.Info("Using network", "range", addr, "interface", iface.Name)
 
 			go func() {
 				// Open up a pcap handle for packet reads/writes.
