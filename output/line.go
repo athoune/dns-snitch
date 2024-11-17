@@ -1,5 +1,7 @@
 package output
 
+import "fmt"
+
 type Line struct {
 	From      string // IP
 	Target    string // IP
@@ -7,6 +9,13 @@ type Line struct {
 	Domain    string
 	Port      uint32
 	Direction string `parquet:"enum"`
+}
+
+func (l *Line) String() string {
+	if l.Direction == "UP" {
+		return fmt.Sprintf("%v: %s ▶ %s(%s):%d", l.TS, l.From, l.Domain, l.Target, l.Port)
+	}
+	return fmt.Sprintf("%v: %s ◀ %s(%s):%d", l.TS, l.Target, l.Domain, l.From, l.Port)
 }
 
 type LineValue struct {
