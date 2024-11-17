@@ -3,6 +3,7 @@ package bucket
 import (
 	"fmt"
 	"io"
+	"log/slog"
 )
 
 type LeakyBucket[K comparable] struct {
@@ -33,6 +34,7 @@ func (l *LeakyBucket[K]) Dump(out io.Writer) {
 }
 
 func (l *LeakyBucket[K]) LeaksAll() {
+	before := len(l.datas)
 	olds := make([]K, 0)
 	for k, v := range l.datas {
 		v.Leak()
@@ -43,6 +45,7 @@ func (l *LeakyBucket[K]) LeaksAll() {
 	for _, old := range olds {
 		delete(l.datas, old)
 	}
+	slog.Info("LeaksAll", "before", before, "after", len(l.datas), "olds", olds)
 }
 
 func (l *LeakyBucket[K]) Add(line K, value int) {
