@@ -30,7 +30,7 @@ func NewTerm(capacity int, truncate time.Duration) *Term {
 func (t *Term) Write(k []Line, v []int) error {
 	t.buckets.LeaksAll()
 	fmt.Print("\033[H\033[2J") // clear screen
-	fmt.Println(len(k), "lines")
+	fmt.Println(len(k), "fresh lines", t.buckets.Length(), "current elements")
 	slog.Info("Term.Write", "lines", len(k))
 	for i, line := range k {
 		t.buckets.Add(line, v[i])
@@ -40,7 +40,7 @@ func (t *Term) Write(k []Line, v []int) error {
 		return err
 	}
 	pattern := fmt.Sprintf("|%%-%ds :%%-4d %%-4s|%%7s|\n", width-21)
-	lines := min(height, len(k)) - 2
+	lines := min(height, t.buckets.Length()) - 2
 	ll, vv := t.buckets.Values()
 	lv := Lines2LineValues(ll, vv)
 	sort.Sort(LineValueBySize(lv))

@@ -82,3 +82,9 @@ func (l *LeakyBucket[K]) Values() ([]K, []int) {
 	}
 	return kk, vv
 }
+
+func (l *LeakyBucket[K]) Length() int {
+	l.lock.RLock()
+	defer l.lock.RUnlock()
+	return len(l.datas)
+}
