@@ -54,6 +54,42 @@ func TestBucket(t *testing.T) {
 	fmt.Println(v.String())
 }
 
+func TestBucketValues(t *testing.T) {
+	bucket := NewLeakyBucket[string](3)
+	type Data struct {
+		domain string
+		size   int
+	}
+	datas := []Data{
+		{
+			"popo.com",
+			42,
+		},
+		{
+			"popo.com",
+			2,
+		},
+		{
+			"popo.com",
+			3,
+		},
+	}
+	for _, data := range datas {
+		bucket.Add(data.domain, data.size)
+	}
+	keys, values := bucket.Values()
+	if len(keys) != 1 {
+		t.Error("?! keys", len(keys))
+	}
+	if keys[0] != "popo.com" {
+		t.Error("?! key name", keys[0])
+	}
+	if values[0] != 47 {
+		t.Error("?! values", values)
+	}
+
+}
+
 func TestLeak(t *testing.T) {
 	bucket := NewLeakyBucket[string](3)
 	type Data struct {
