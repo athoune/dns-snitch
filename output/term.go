@@ -2,6 +2,7 @@ package output
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"sort"
 	"time"
@@ -27,11 +28,10 @@ func NewTerm(capacity int, truncate time.Duration) *Term {
 }
 
 func (t *Term) Write(k []Line, v []int) error {
+	t.buckets.LeaksAll()
 	fmt.Print("\033[H\033[2J") // clear screen
-	if len(k) == 0 {
-		return nil
-	}
-	fmt.Println(len(k), len(v))
+	fmt.Println(len(k), "lines")
+	slog.Info("Term.Write", "lines", len(k))
 	for i, line := range k {
 		t.buckets.Add(line, v[i])
 	}
