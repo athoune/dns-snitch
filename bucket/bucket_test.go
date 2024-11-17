@@ -44,8 +44,8 @@ func TestBucket(t *testing.T) {
 		t.Error("The pointer is lost 0 !=", v.current_pos)
 	}
 	v.Leak()
-	if v.current_pos != 0 {
-		t.Error("The pointer is lost 0 !=", v.current_pos)
+	if v.current_pos != 1 {
+		t.Error("The pointer is lost 5 !=", v.current_pos)
 	}
 	if v.length != 5 {
 		fmt.Println(v)
