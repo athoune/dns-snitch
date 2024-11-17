@@ -17,15 +17,15 @@ func main() {
 		fmt.Println("Some interfaces are mandatory")
 		return
 	}
-	f, err := os.OpenFile("snitch.log", os.O_CREATE+os.O_APPEND, 0664)
+	f, err := os.OpenFile("snitch.log", os.O_CREATE+os.O_APPEND+os.O_WRONLY, 0664)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
-	//logger := slog.New(slog.NewJSONHandler(f, nil))
+	logger := slog.New(slog.NewJSONHandler(f, nil))
 	//logger := slog.Default()
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	//slog.SetDefault(logger)
+	slog.SetDefault(logger)
 
 	ifaces := make([]*net.Interface, 0)
 
@@ -36,6 +36,7 @@ func main() {
 		}
 		ifaces = append(ifaces, iface)
 	}
+	slog.Info("Interfaces", "ifaces", ifaces)
 	Snitch := snitch.New()
 	v, err := output.New("./snitch.parquet")
 	if err != nil {
