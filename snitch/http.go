@@ -56,15 +56,16 @@ func (s *Snitch) buildLine(src, dest net.IP, tcp *layers.TCP) *output.Line {
 	l := &output.Line{
 		From:   src.String(),
 		Target: dest.String(),
-		Domain: s.domain(dest),
 	}
 	if tcp.DstPort == 443 || tcp.DstPort == 80 {
 		l.Port = uint32(tcp.DstPort)
 		l.Direction = "UP"
+		l.Domain = s.domain(dest)
 	}
 	if tcp.SrcPort == 443 || tcp.SrcPort == 80 {
 		l.Port = uint32(tcp.SrcPort)
 		l.Direction = "DOWN"
+		l.Domain = s.domain(src)
 	}
 	return l
 }
