@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Counters count stuff and trigger harvesters periodically
 type Counters[K comparable] struct {
 	lock           *sync.Mutex
 	counters       map[K]int
