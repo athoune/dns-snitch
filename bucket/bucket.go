@@ -33,8 +33,15 @@ func (l *LeakyBucket[K]) Dump(out io.Writer) {
 }
 
 func (l *LeakyBucket[K]) LeaksAll() {
-	for _, v := range l.datas {
+	olds := make([]K, 0)
+	for k, v := range l.datas {
 		v.Leak()
+		if v.Sum() == 0 {
+			olds = append(olds, k)
+		}
+	}
+	for _, old := range olds {
+		delete(l.datas, old)
 	}
 }
 

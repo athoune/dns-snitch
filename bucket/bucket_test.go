@@ -53,3 +53,59 @@ func TestBucket(t *testing.T) {
 	}
 	fmt.Println(v.String())
 }
+
+func TestLeak(t *testing.T) {
+	bucket := NewLeakyBucket[string](3)
+	type Data struct {
+		domain string
+		size   int
+	}
+	datas := []Data{
+		{
+			"popo.com",
+			42,
+		},
+		{
+			"popo.com",
+			2,
+		},
+		{
+			"popo.com",
+			3,
+		},
+	}
+	for _, data := range datas {
+		bucket.Add(data.domain, data.size)
+	}
+	line := bucket.Get("popo.com")
+	if line.length != 3 {
+		t.Error("oups length", line.length)
+	}
+	if line.Sum() != 47 {
+		t.Error("Oups sum", line.Sum())
+	}
+	bucket.LeaksAll()
+	line = bucket.Get("popo.com")
+	if line.length != 2 {
+		t.Error("oups length", line.length)
+	}
+	if line.Sum() != 5 {
+		t.Error("Oups sum", line.Sum())
+	}
+	bucket.LeaksAll()
+	line = bucket.Get("popo.com")
+	if line.length != 1 {
+		t.Error("oups length", line.length)
+	}
+	if line.Sum() != 3 {
+		t.Error("Oups sum", line.Sum())
+	}
+	bucket.LeaksAll()
+	line = bucket.Get("popo.com")
+	if line != nil {
+		t.Error("Line is not nil")
+	}
+	if len(bucket.datas) > 0 {
+		t.Error("datas is not empty", bucket.datas)
+	}
+}

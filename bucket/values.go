@@ -36,10 +36,11 @@ func (b *BucketValues) Leak() {
 	}
 	capacity := len(b.values)
 	n := b.current_pos + 1
-	if n > capacity {
+	if n >= capacity {
 		n -= capacity
 	}
 	b.values[n] = 0
+	b.current_pos = n
 	b.length--
 }
 
