@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/miekg/dns v1.1.62
 	github.com/parquet-go/parquet-go v0.24.0
-	golang.org/x/term v0.26.0
+	golang.org/x/term v0.30.0
 )
 
 require (
