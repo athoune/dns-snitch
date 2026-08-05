@@ -1,7 +1,6 @@
 package snitch
 
 import (
-	"io"
 	"net/netip"
 	"sync"
 
@@ -29,7 +28,4 @@ func New() *Snitch {
 
 func (s *Snitch) AddCounter(c *counter.Counters[output.Line]) {
 	s.counters = append(s.counters, c)
-}
-
-func (r *Snitch) Dump(output io.Writer) {
 }
