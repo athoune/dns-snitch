@@ -3,6 +3,7 @@ package counter
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -29,12 +30,12 @@ func TestBatchCounter(t *testing.T) {
 		return nil
 	})
 	w := &sync.WaitGroup{}
-	cpt := 0
+	var cpt atomic.Int32
 	w.Add(n)
 	for i := 0; i < n; i++ {
 		go func() {
 			if ok, _ := c.Add("pim", 1); ok {
-				cpt++
+				cpt.Add(1)
 			}
 			w.Done()
 		}()
@@ -44,8 +45,8 @@ func TestBatchCounter(t *testing.T) {
 	if done != n/10 {
 		t.Error("Not enough harvester loop", done, "!=", n/10)
 	}
-	if cpt != n/10 {
-		t.Error("Bad cpt", cpt)
+	if cpt.Load() != int32(n/10) {
+		t.Error("Bad cpt", cpt.Load())
 	}
 	if total != n {
 		t.Error("Wrong total", total, "!=", n)
@@ -54,13 +55,13 @@ func TestBatchCounter(t *testing.T) {
 
 func TestTimeCounter(t *testing.T) {
 	n := 100
-	cpt := 0
+	var cpt atomic.Int32
 	c := New[string](10, 100*time.Millisecond, func(k []string, v []int) error {
 		fmt.Println(v)
 		if len(v) == 0 {
 			return nil
 		}
-		cpt += v[0]
+		cpt.Add(int32(v[0]))
 		return nil
 	})
 	for i := 0; i < n; i++ {
@@ -72,7 +73,7 @@ func TestTimeCounter(t *testing.T) {
 		}()
 	}
 	time.Sleep(200 * time.Millisecond)
-	if cpt != n {
-		t.Error("Not enough", cpt)
+	if cpt.Load() != int32(n) {
+		t.Error("Not enough", cpt.Load())
 	}
 }

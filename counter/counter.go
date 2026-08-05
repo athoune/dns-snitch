@@ -1,11 +1,12 @@
 package counter
 
 import (
+	"log/slog"
 	"sync"
 	"time"
 )
 
-// Counters count stuff and trigger harvesters periodically
+// Counters count stuff and trigger harvesters periodically.
 type Counters[K comparable] struct {
 	lock           *sync.Mutex
 	counters       map[K]int
@@ -14,14 +15,14 @@ type Counters[K comparable] struct {
 	batch_duration time.Duration
 	harvester      Harvester[K]
 	timer          *time.Timer
-	batch_complete chan interface{}
 }
 
 type Harvester[K comparable] func(key []K, value []int) error
 
+// New returns a new *Counters[K].
+// If batch_size > 0, reaching it triggers an immediate harvest. The timer is
+// a fallback that harvests whatever accumulated after batch_duration.
 func New[K comparable](batch_size int, batch_duration time.Duration, h Harvester[K]) *Counters[K] {
-	// New return a new *Counters[K]
-	// if batch_size > 0, it's a trigger
 	c := &Counters[K]{
 		lock:           &sync.Mutex{},
 		counters:       make(map[K]int),
@@ -29,7 +30,6 @@ func New[K comparable](batch_size int, batch_duration time.Duration, h Harvester
 		batch_duration: batch_duration,
 		harvester:      h,
 		timer:          time.NewTimer(batch_duration),
-		batch_complete: make(chan interface{}),
 	}
 	if c.harvester != nil {
 		go c.loopForHarvest()
@@ -39,38 +39,38 @@ func New[K comparable](batch_size int, batch_duration time.Duration, h Harvester
 
 func (c *Counters[K]) loopForHarvest() {
 	for {
-		select {
-		case <-c.timer.C:
-			c.lock.Lock()
-		case <-c.batch_complete:
-			// lock is Lock in the Add function
+		<-c.timer.C
+		c.lock.Lock()
+		if err := c.harvest(); err != nil {
+			// Keep the counters: the next tick will retry.
+			slog.Error("harvest failed", "err", err)
 		}
-		c.harvest()
 		c.timer = time.NewTimer(c.batch_duration)
 		c.lock.Unlock()
 	}
 }
 
+// Add stores value under key. When the batch is full, the accumulated
+// counters are harvested synchronously under the lock: batches are exact
+// and the lock never travels across goroutines.
 func (c *Counters[K]) Add(key K, value int) (bool, error) {
 	c.lock.Lock()
-	r := false
-	v, ok := c.counters[key]
-	if !ok {
-		c.counters[key] = value
-	}
-	c.counters[key] = v + value
+	defer c.lock.Unlock()
+	c.counters[key] += value
 	c.cpt++
-	if c.cpt == c.batch_size { // increment is done before, for handling early return
-		c.batch_complete <- new(interface{})
-		r = true
-	} else {
-		c.lock.Unlock()
+	if c.batch_size > 0 && c.cpt == c.batch_size {
+		if err := c.harvest(); err != nil {
+			return true, err
+		}
+		return true, nil
 	}
-	return r, nil
+	return false, nil
 }
 
 func (c *Counters[K]) harvest() error {
-	var err error
+	if len(c.counters) == 0 {
+		return nil
+	}
 	keys := make([]K, len(c.counters))
 	values := make([]int, len(c.counters))
 	i := 0
@@ -79,8 +79,7 @@ func (c *Counters[K]) harvest() error {
 		values[i] = v
 		i++
 	}
-	err = c.harvester(keys, values)
-	if err != nil {
+	if err := c.harvester(keys, values); err != nil {
 		return err
 	}
 	c.counters = make(map[K]int)
