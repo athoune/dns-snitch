@@ -1,6 +1,7 @@
 package snitch
 
 import (
+	"net/netip"
 	"testing"
 
 	"github.com/google/gopacket/layers"
@@ -8,6 +9,8 @@ import (
 
 func TestBuildLine(t *testing.T) {
 	s := New()
+	// Seed the resolution cache so the test is hermetic (no live reverse DNS).
+	s.AddResolution(netip.AddrFrom4([4]byte{212, 27, 48, 10}), "www.free.fr.")
 	tcp := &layers.TCP{}
 	tcp.DstPort = 443
 	line := s.buildLine([]byte{192, 168, 1, 1}, []byte{212, 27, 48, 10}, tcp)

@@ -3,6 +3,7 @@ package snitch
 import (
 	"net"
 	"net/netip"
+	"sort"
 
 	"github.com/hashicorp/go-set"
 )
@@ -19,7 +20,10 @@ func (s *Snitch) domain(ip net.IP) string {
 	}
 	s.mutex.RUnlock()
 	if ok {
-		return domains.Slice()[0] // FIXME
+		// An IP can be resolved by several names, pick a deterministic one.
+		names := domains.Slice()
+		sort.Strings(names)
+		return names[0]
 	} else {
 		addr, err := net.LookupAddr(ip.String())
 		if err != nil {
