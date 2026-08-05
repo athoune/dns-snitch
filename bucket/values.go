@@ -35,12 +35,13 @@ func (b *BucketValues) Sum() int {
 }
 
 // Leak the last value
-func (b *BucketValues) Leak() {
-	if b.length == 0 { // Can't remove thing from an empty collection
-		return
-	}
+func (b *BucketValues) Leak() int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+	// Can't remove thing from an empty collection
+	if b.length == 0 {
+		return -1
+	}
 	capacity := len(b.values)
 	n := b.current_pos + 1
 	if n >= capacity {
@@ -49,15 +50,23 @@ func (b *BucketValues) Leak() {
 	b.values[n] = 0
 	b.current_pos = n
 	b.length--
+	return b.length
 }
 
 func (b *BucketValues) Add(value int) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	b.values[b.next()] = value
+	// The buffer keeps track of the values still in the window:
+	// growing until full, never resetting (a Leak must not be undone).
 	if b.length < len(b.values) {
 		b.length++
 	}
+}
+
+// Recyclable is ok when the BucketValues is fully used and empty
+func (b *BucketValues) Recyclable() bool {
+	return b.length == 0
 }
 
 func (b *BucketValues) next() int {
@@ -89,4 +98,9 @@ func (b *BucketValues) String() string {
 		}
 	}
 	return buff.String()
+}
+
+// Length is the number of stored values
+func (b *BucketValues) Length() int {
+	return b.length
 }

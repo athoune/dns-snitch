@@ -1,6 +1,7 @@
 package bucket
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 )
@@ -10,14 +11,26 @@ func TestBucket(t *testing.T) {
 	line := "popo.com"
 	bucket.Add(line, 1)
 	bucket.Add(line, 2)
+	if bucket.Length() != 1 {
+		t.Error("Bad bucket length", bucket.Length())
+	}
+	buff := &bytes.Buffer{}
+	err := bucket.Dump(buff)
+	if err != nil {
+		t.Error("Dump error", err)
+	}
+	dump := buff.String()
+	if dump != "popo.com => 3\n" {
+		t.Error("Dump error :", dump)
+	}
 	v := bucket.Get(line)
 	fmt.Println(v)
-	if v.length != 2 {
+	if v.Length() != 2 {
 		t.Error("Bad length 2 !=", v.length)
 	}
 	fmt.Println(v.String())
 	if v == nil {
-		t.Error("Unknown line", line, bucket.datas)
+		t.Error("Unknown line", line, bucket.data)
 	}
 	s := v.Sum()
 	if s != 3 {
@@ -42,6 +55,10 @@ func TestBucket(t *testing.T) {
 	}
 	if v.current_pos != 0 {
 		t.Error("The pointer is lost 0 !=", v.current_pos)
+	}
+	if v.length != 6 {
+		fmt.Println(v)
+		t.Error("Bad length 6 !=", v.length)
 	}
 	v.Leak()
 	if v.current_pos != 1 {
@@ -96,7 +113,7 @@ func TestLeak(t *testing.T) {
 		domain string
 		size   int
 	}
-	datas := []Data{
+	for _, data := range []Data{
 		{
 			"popo.com",
 			42,
@@ -109,12 +126,11 @@ func TestLeak(t *testing.T) {
 			"popo.com",
 			3,
 		},
-	}
-	for _, data := range datas {
+	} {
 		bucket.Add(data.domain, data.size)
 	}
 	line := bucket.Get("popo.com")
-	if line.length != 3 {
+	if line.Length() != 3 {
 		t.Error("oups length", line.length)
 	}
 	if line.Sum() != 47 {
@@ -136,12 +152,22 @@ func TestLeak(t *testing.T) {
 	if line.Sum() != 3 {
 		t.Error("Oups sum", line.Sum())
 	}
-	bucket.LeaksAll()
+	if line.Recyclable() {
+		t.Error("Not recyclable yet")
+	}
+	olds := bucket.LeaksAll()
+	if olds != 1 {
+		t.Error("Oups LeaksAll", olds)
+	}
 	line = bucket.Get("popo.com")
 	if line != nil {
 		t.Error("Line is not nil")
 	}
-	if len(bucket.datas) > 0 {
-		t.Error("datas is not empty", bucket.datas)
+	if bucket.Length() > 0 {
+		t.Error("datas is not empty", bucket.data)
+	}
+	olds = bucket.LeaksAll()
+	if olds != 0 {
+		t.Error("Oups LeaksAll", olds)
 	}
 }
