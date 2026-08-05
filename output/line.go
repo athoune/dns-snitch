@@ -18,6 +18,14 @@ func (l *Line) String() string {
 	return fmt.Sprintf("%v: %s ◀ %s(%s):%d", l.TS, l.Target, l.Domain, l.From, l.Port)
 }
 
+// Server IP, target or destination
+func (l *Line) Server() string {
+	if l.Direction == "UP" {
+		return l.Target
+	}
+	return l.From
+}
+
 type LineValue struct {
 	Line
 	Weight int32
