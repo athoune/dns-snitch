@@ -2,3 +2,4 @@ dns-snitch
 snitch.parquet
 snitch.log
 .vscode/
+session-ses_*.md
