@@ -12,6 +12,13 @@ Build it
 go build .
 ```
 
+Test it
+-------
+
+```
+make test
+```
+
 Run it
 ------
 
