@@ -66,6 +66,8 @@ func (b *BucketValues) Add(value int) {
 
 // Recyclable is ok when the BucketValues is fully used and empty
 func (b *BucketValues) Recyclable() bool {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 	return b.length == 0
 }
 
@@ -102,5 +104,7 @@ func (b *BucketValues) String() string {
 
 // Length is the number of stored values
 func (b *BucketValues) Length() int {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 	return b.length
 }
