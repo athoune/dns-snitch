@@ -19,7 +19,7 @@ func TestParquet(t *testing.T) {
 	c := counter.New[Line](10, 10*time.Second, w.Write)
 	c.Add(Line{
 		From:      "192.168.1.1",
-		Target:    "127.0,.0,.1",
+		Target:    "127.0.0.1",
 		TS:        int64(time.Now().Nanosecond()),
 		Domain:    "localhost",
 		Port:      80,

@@ -21,7 +21,7 @@ type ParquetWriter struct {
 
 func New(path string) (*ParquetWriter, error) {
 	// FIXME handle duration
-	w, err := os.OpenFile("./snitch.parquet", os.O_WRONLY+os.O_CREATE, 0660)
+	w, err := os.OpenFile(path, os.O_WRONLY+os.O_CREATE, 0660)
 	if err != nil {
 		return nil, err
 	}
