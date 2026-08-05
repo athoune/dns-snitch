@@ -1,7 +1,6 @@
 package counter
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -13,7 +12,6 @@ func TestBatchCounter(t *testing.T) {
 	done := 0
 	total := 0
 	c := New[string](10, 10*time.Second, func(k []string, v []int) error {
-		fmt.Println("v", v)
 		if len(k) == 0 {
 			return nil
 		}
@@ -53,26 +51,46 @@ func TestBatchCounter(t *testing.T) {
 	}
 }
 
+// TestTimeCounter checks that the timer triggers harvests even when the batch
+// size is never reached. The batch is larger than the number of adds, so only
+// the timer can flush the counters.
 func TestTimeCounter(t *testing.T) {
 	n := 100
 	var cpt atomic.Int32
-	c := New[string](10, 100*time.Millisecond, func(k []string, v []int) error {
-		fmt.Println(v)
-		if len(v) == 0 {
-			return nil
+	harvested := make(chan struct{}, 1)
+	c := New[string](n+1, 50*time.Millisecond, func(k []string, v []int) error {
+		for _, i := range v {
+			cpt.Add(int32(i))
 		}
-		cpt.Add(int32(v[0]))
+		select {
+		case harvested <- struct{}{}:
+		default:
+		}
 		return nil
 	})
+	w := &sync.WaitGroup{}
 	for i := 0; i < n; i++ {
+		w.Add(1)
 		go func() {
-			_, err := c.Add("pim", 1)
-			if err != nil {
+			defer w.Done()
+			if _, err := c.Add("pim", 1); err != nil {
 				t.Error("Add loop error :", err)
 			}
 		}()
 	}
-	time.Sleep(200 * time.Millisecond)
+	w.Wait()
+
+	// The timer must fire at least once.
+	select {
+	case <-harvested:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timer never harvested")
+	}
+
+	// Drain whatever is left, then the total must be exact.
+	if err := c.Harvest(); err != nil {
+		t.Fatal(err)
+	}
 	if cpt.Load() != int32(n) {
 		t.Error("Not enough", cpt.Load())
 	}
