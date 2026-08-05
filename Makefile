@@ -1,6 +1,10 @@
+all: build
+
 build:
 	go build .
-	upx dns-snitch
 
 test:
 	go test ./...
+
+clean:
+	rm -f dns-snitch
